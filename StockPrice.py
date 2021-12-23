@@ -4,7 +4,7 @@ import datetime
 from PIL import Image
 import time #format some variable
 import requests
-from PIL import Image, ImageTk
+from PIL import Image
 import bs4
 
 st.write("""
