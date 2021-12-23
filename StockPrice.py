@@ -107,26 +107,57 @@ def get_covid_data():
         
         count = block.find("span", class_ = None).get_text()
         
-        all_data = all_data + text + " " +  count + "\n"
+        all_data = all_data + text + " " +  count + ". "
     return all_data
 
 def reload():
     new_data = get_covid_data()
-    tom = new_data
-    return tom
+    return new_data
 
-st.sidebar.header("Options")
-button1 = st.sidebar.button("Covid Tracking")
-if button1:
-    tom = st.sidebar.write(get_covid_data())
-    button2 = st.sidebar.button("Reload")
-    if button2:
-        tom = st.sidebar.write(reload())
+#get a random country details  
+def get_country_data():
+    name = country123
+    url = "https://www.worldometers.info/coronavirus/country/"+name    
+    html_data = get_html_data(url)
+    #use bs4 to beutify our data
+    bs = bs4.BeautifulSoup(html_data.text, 'html.parser')
+    info_div = bs.find("div", class_ ="content-inner").findAll("div", id="maincounter-wrap")
+    all_data =""    
+    #because there is three values that we are looking for so we make a loop
+    for i in range(3):
+        text = info_div[i].find("h1", class_ = None).get_text()
+        
+        count = info_div[i].find("span", class_ = None).get_text()
+        
+        all_data = all_data + text + " " +  count + ". "
+    return all_data
 
+# add button2 within the button1 and make it to work: https://discuss.streamlit.io/t/button-inside-button/12046/4
+# https://www.youtube.com/watch?v=EnXJBsCIl_A&t=29s&ab_channel=Streamlit
 
-# fieldtext1 = st.sidebar.text_input("Enter your city for the weather", max_chars=10)
+original_list = ['Select options','Covid Tracking', 'Weather']
+option = st.sidebar.selectbox('What options would you like to pick?', original_list)
+if option != 'Select options':
+    st.sidebar.write('You selected: ', option)
+    if option == 'Covid Tracking':
+        st.sidebar.write(get_covid_data())
+        button2 = st.sidebar.checkbox("Reload")
+        button3 = st.sidebar.checkbox("Get Data")
+        if button2:
+            st.sidebar.write(reload())
+        if button3:
+            country123 = st.sidebar.text_input("Enter the country you want to check")
+            if country123:
+                st.sidebar.write("The data for the country", country123, ":")
+                st.sidebar.write(get_country_data())
+            
+    if option == 'Weather':
+        fieldtext1 = st.sidebar.text_input("Enter your city for the weather", max_chars=10)
+        if fieldtext1:
+            st.sidebar.write(getWeather(fieldtext1))
 
-# st.sidebar.write(getWeather(fieldtext1))
+## add the location
+## add the percentage of recovering
 
 
 
