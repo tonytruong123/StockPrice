@@ -3,4 +3,4 @@ yfinance==0.1.67
 datetime== 4.3
 pillow==8.4.0
 requests==2.26.0
-bs4=4.10.0
+bs4==4.10.0
