@@ -2,6 +2,12 @@ import streamlit as st
 import yfinance as yf
 import datetime
 from PIL import Image
+import time #format some variable
+import requests
+import tkinter as tk
+from PIL import Image, ImageTk
+from tkinter import Label
+import bs4
 
 st.write("""
 # Simple Stock Price App
@@ -41,3 +47,88 @@ if tickerSymbol:
     ### Volume Price 
     """)
     st.line_chart(tickerDf.Volume)
+
+f = ("poppins", 15, "bold")
+t = ("poppins", 35, "bold")
+
+
+def getWeather(fieldtext):
+    #get the input from the user
+    city = fieldtext
+    #api from the website, 2 inputs: api key and the city
+    api ="https://api.openweathermap.org/data/2.5/weather?q="+city+"&appid=12d02cb722709709e0889db756957fca"
+    #JSON is a syntax for storing and exchanging data.
+    # https://www.delftstack.com/howto/python/python-get-json-from-url/#:~:text=Get%20and%20Access%20JSON%20Data%20in%20Python%201,format.%20...%203%20Access%20the%20JSON%20Data.%20
+    # The first step we have to perform here is to fetch the JSON data using the requests library.
+    json_data = requests.get(api).json()
+    condition = json_data['weather'][0]['main']
+    temp = int(json_data['main']['temp'] -273.15)
+    min_temp = int(json_data['main']['temp_min'] -273.15)   
+    max_temp = int(json_data['main']['temp_max'] -273.15)
+    pressure = json_data['main']['pressure']
+    humidity = json_data['main']['pressure']
+    wind_speed = json_data['wind']['speed']
+    #strftime: Convert a time tuple to a string according to a format specification
+    # %I:%M:%M: hours minute seconds in 12 hour format
+    # %H:%M:%M: hours minute seconds in 24 hour format
+    sunrise = time.strftime("%I:%M:%M", time.gmtime(json_data['sys']['sunrise'] - 21600))
+    sunset = time.strftime("%H:%M:%M", time.gmtime(json_data['sys']['sunset'] - 21600))
+    
+    #we will define two strings to carry our data
+    final_data = condition + "\n" + str(temp) + "°C" + ", Max Temp: " + str(max_temp) +  ", Min Temp: " + str(min_temp) +  ", Pressure: " + str(pressure) +  ", Humidity: " + str(humidity) +  ", Wind Speed: " + str(wind_speed) + ", Sun Rise: " + str(sunrise)  + ", Sun Set: " + str(sunset) 
+    
+    #config is used to access an object's attributes after its initialisation.
+    # config is used to access an object's attributes after its initialisation. For example, here, you define
+    # l = Label(root, bg="ivory", fg="darkgreen")
+    # but then you want to set its text attribute, so you use config:
+    #l.config(text="Correct answer!")
+    return final_data
+
+def get_html_data(url):
+    data = requests.get(url)
+    return data
+
+#get the request url
+def get_covid_data():
+    url = "https://www.worldometers.info/coronavirus/"
+    html_data = get_html_data(url)
+    #use bs4 to beutify our data
+    bs = bs4.BeautifulSoup(html_data.text, 'html.parser')
+    #this is how we find the data in a html file, we find the covid cases
+    #content inner is the whole content info of the website
+    #then we will locate the child of the conten-inner which is the maincounter wrap
+    info_div = bs.find("div", class_ ="content-inner").findAll("div", id="maincounter-wrap")
+    all_data =""
+    
+    #our task is to find the amount of deaths and recovered => we will find each separately
+    #each info (#deaths and #recovered) is stored as a block
+    #a block is a piece of Python program text that is executed as a unit
+    for block in info_div:
+        #Coronavirus cases is in the h1, so we will find the info in h1
+        text = block.find("h1", class_ = None).get_text()
+        
+        count = block.find("span", class_ = None).get_text()
+        
+        all_data = all_data + text + " " +  count + "\n"
+    return all_data
+
+def reload():
+    new_data = get_covid_data()
+    tom = new_data
+    return tom
+
+st.sidebar.header("Options")
+button1 = st.sidebar.button("Covid Tracking")
+if button1:
+    tom = st.sidebar.write(get_covid_data())
+    button2 = st.sidebar.button("Reload")
+    if button2:
+        tom = st.sidebar.write(reload())
+
+
+# fieldtext1 = st.sidebar.text_input("Enter your city for the weather", max_chars=10)
+
+# st.sidebar.write(getWeather(fieldtext1))
+
+
+
