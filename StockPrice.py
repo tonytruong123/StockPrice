@@ -4,7 +4,6 @@ import datetime
 from PIL import Image
 import time #format some variable
 import requests
-import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter import Label
 import bs4
