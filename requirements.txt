@@ -4,3 +4,4 @@ datetime== 4.3
 pillow==8.4.0
 requests==2.26.0
 bs4==0.0.1
+matplotlib==3.5.1
