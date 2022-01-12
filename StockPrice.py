@@ -1,54 +1,131 @@
 import streamlit as st
+import pandas as pd
+import base64
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 import yfinance as yf
-import datetime
-from PIL import Image
 import time #format some variable
 import requests
 from PIL import Image
 import bs4
+import datetime
 
 st.write("""
 # Simple Stock Price App
-
-Shown are the stock closing price and volume! 
 """)
-# cheat sheet: https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet
-# http://towardsdatascience.com/how-to-get-stock-data-using-python-c0de1df17e75
-# how to deploy your websitre https://docs.streamlit.io/streamlit-cloud/get-started/deploy-an-app
+
+st.title('S&P 500')
 
 image = Image.open("StockPicture.jfif")
 st.image(image, use_column_width=True)
 
+
+st.markdown("""
+    This website retrieves the list of the S&P 500 and its corresponding **stock closing price** (year-to-data)!        
+        * **Data source:**[Wikipedia](https://en.wikipedia.org/wiki/List_of_S%26P_500_companies).    
+            """)
+st.sidebar.header('User Input Features')
+
+@st.cache
+def data_load():
+    url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
+    html = pd.read_html(url, header = 0)
+    #we only want the first table
+    df = html[0]
+    return df
+
+df = data_load()
+#type of company
+sector = df.groupby('GICS Sector')
+
+#soreted sector and we will list them in the sidebar
+sorted_unique_sector = sorted(df['GICS Sector'].unique())
+selected_sector = st.sidebar.multiselect('Sector', sorted_unique_sector, sorted_unique_sector)
+
+#filtering data
+df_selected_sector = df[(df['GICS Sector'].isin(selected_sector))]
+
+# https://pypi.org/project/yfinance/
+
+
+st.write("Display Companies in Selected Sector")
+st.write('Data Dimension: ' + str(df_selected_sector.shape[0]) + ' rows and '+ str(df_selected_sector.shape[1]) + ' columns.')
+st.dataframe(df_selected_sector)
+    
+# streamlit run .\StockPrice.py
+
+########################################################################
+
+st.write(" ## Enter the Stock to see its change over time")
+# cheat sheet: https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet
+# http://towardsdatascience.com/how-to-get-stock-data-using-python-c0de1df17e75
+# how to deploy your websitre https://docs.streamlit.io/streamlit-cloud/get-started/deploy-an-app
+
 # define the ticker symbol
 # https://stockanalysis.com/stocks/
+
+data = yf.download(
+        tickers = list(df_selected_sector[:501].Symbol),
+        period = "ytd",
+        interval = "1wk",
+        group_by = 'ticker',
+        auto_adjust = True,
+        prepost = True,
+        threads = True,
+        proxy = None
+    )
+def price_plot_high(company):
+    df = pd.DataFrame(data[company].High)
+    df['Date'] = df.index
+    plt.fill_between(df.Date, df.High, color='skyblue', alpha=0.3)
+    plt.plot(df.Date, df.High, color='skyblue', alpha=0.8)
+    plt.xticks(rotation=90)
+    plt.title(company, fontweight='bold')
+    plt.xlabel('Date', fontweight='bold')
+    plt.ylabel('High Price', fontweight='bold')
+    return st.pyplot()
+
+def price_plot_low(company):
+    df = pd.DataFrame(data[company].Low)
+    df['Date'] = df.index
+    plt.fill_between(df.Date, df.Low, color='skyblue', alpha=0.3)
+    plt.plot(df.Date, df.Low, color='skyblue', alpha=0.8)
+    plt.xticks(rotation=90)
+    plt.title(company, fontweight='bold')
+    plt.xlabel('Date', fontweight='bold')
+    plt.ylabel('Low Price', fontweight='bold')
+    return st.pyplot()
+
+def price_plot_close(company):
+    df = pd.DataFrame(data[company].Close)
+    df['Date'] = df.index
+    plt.fill_between(df.Date, df.Close, color='skyblue', alpha=0.3)
+    plt.plot(df.Date, df.Close, color='skyblue', alpha=0.8)
+    plt.xticks(rotation=90)
+    plt.title(company, fontweight='bold')
+    plt.xlabel('Date', fontweight='bold')
+    plt.ylabel('Close Price', fontweight='bold')
+    return st.pyplot()
+
 tickerSymbol = st.text_input("Enter your stock", max_chars=10)
+page_names = ['High', 'Low', 'Closed']
+page = st.radio('Select an option', page_names)
+st.write("**The variable 'page' returns:**", page)
+if page == 'High':
+    for i in list(df_selected_sector.Symbol):
+        if i == tickerSymbol:
+            price_plot_high(i)
+            
+if page == 'Low':
+    for i in list(df_selected_sector.Symbol):
+        if i == tickerSymbol:
+            price_plot_low(i)
 
-#get data on this ticker
-tickerData = yf.Ticker(tickerSymbol)
-#get the historical prices for this ticker
-StartDate = st.date_input("Select the start date", value = datetime.date(1995, 6, 15), 
-                        min_value = datetime.date(1990, 1, 1), 
-                        max_value = datetime.date(2050, 12, 31))
-EndDate = st.date_input("Select the end date", value = datetime.date(1995, 6, 15), 
-                        min_value = datetime.date(1990, 1, 1), 
-                        max_value = datetime.date(2050, 12, 31))
-tickerDf = tickerData.history(period='1d',start = StartDate, end = EndDate)
-# Open                   High                  Low Close                  Volume                 Dividends              Stock Splits
-
-if tickerSymbol:
-    st.write("""
-    ### Closing Price 
-    """)
-    st.line_chart(tickerDf.Close)
-
-    st.write("""
-    ### Volume Price 
-    """)
-    st.line_chart(tickerDf.Volume)
-
-f = ("poppins", 15, "bold")
-t = ("poppins", 35, "bold")
-
+if page == 'Closed':
+    for i in list(df_selected_sector.Symbol):
+        if i == tickerSymbol:
+            price_plot_close(i)
 
 def getWeather(fieldtext):
     #get the input from the user
@@ -88,7 +165,11 @@ def get_html_data(url):
 
 #get the request url
 def get_covid_data():
+    # web browser is now a client
+    # server is url
     url = "https://www.worldometers.info/coronavirus/"
+    #request response protocol: "get" request. You are requesting data from the server
+    #https://www.youtube.com/watch?v=pHFWGN-upGM&ab_channel=Udacity
     html_data = get_html_data(url)
     #use bs4 to beutify our data
     bs = bs4.BeautifulSoup(html_data.text, 'html.parser')
@@ -117,12 +198,15 @@ def reload():
 #get a random country details  
 def get_country_data():
     name = country123
-    url = "https://www.worldometers.info/coronavirus/country/"+name    
+    text = "Country not found"
+    url = "https://www.worldometers.info/coronavirus/country/"+name
     html_data = get_html_data(url)
     #use bs4 to beutify our data
     bs = bs4.BeautifulSoup(html_data.text, 'html.parser')
     info_div = bs.find("div", class_ ="content-inner").findAll("div", id="maincounter-wrap")
-    all_data =""    
+    all_data =""
+    if html_data == None:
+        st.sidebar.write("Error")
     #because there is three values that we are looking for so we make a loop
     for i in range(3):
         text = info_div[i].find("h1", class_ = None).get_text()
@@ -130,6 +214,7 @@ def get_country_data():
         count = info_div[i].find("span", class_ = None).get_text()
         
         all_data = all_data + text + " " +  count + ". "
+        
     return all_data
 
 # add button2 within the button1 and make it to work: https://discuss.streamlit.io/t/button-inside-button/12046/4
@@ -154,10 +239,5 @@ if option != 'Select options':
     if option == 'Weather':
         fieldtext1 = st.sidebar.text_input("Enter your city for the weather", max_chars=10)
         if fieldtext1:
+            st.sidebar.write("The temperature for your city "+ fieldtext1 + " :")
             st.sidebar.write(getWeather(fieldtext1))
-
-## add the location
-## add the percentage of recovering
-
-
-
